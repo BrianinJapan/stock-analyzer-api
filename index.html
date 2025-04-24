@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>股票分析建議</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        #results { margin-top: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 5px; background-color: #f9f9f9; }
+        #results pre { white-space: pre-wrap; word-wrap: break-word; }
+        button { padding: 10px 15px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+        input[type="text"] { padding: 10px; margin-right: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        .recommend-buy { color: green; font-weight: bold; }
+        .recommend-sell { color: red; font-weight: bold; }
+        .recommend-hold { color: gray; }
+        .error { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>股票技術分析建議</h1>
+    <p>請輸入股票代號 (例如: AAPL, 0005.HK):</p>
+    <input type="text" id="tickerInput" placeholder="輸入股票代號">
+    <button onclick="getAnalysis()">獲取建議</button>
+
+    <div id="results">
+        <!-- 結果將顯示在這裡 -->
+        正在等待輸入...
+    </div>
+
+    <script>
+        async function getAnalysis() {
+            const ticker = document.getElementById('tickerInput').value.trim();
+            const resultsDiv = document.getElementById('results');
+
+            if (!ticker) {
+                resultsDiv.innerHTML = '<p class="error">請輸入一個股票代號！</p>';
+                return;
+            }
+
+            resultsDiv.innerHTML = '<p>正在分析中...</p>'; // 顯示加載信息
+
+            // 構建 API 的 URL。這裡假設你的 API 在相對路徑 /api/analyze
+            // Vercel 會自動將請求路由到 api/analyze.py 的 handler 函數
+            const apiUrl = `/api/analyze?ticker=${encodeURIComponent(ticker)}`; // 使用相對路徑
+
+            try {
+                const response = await fetch(apiUrl);
+                const data = await response.json(); // 解析 JSON 響應
+
+                // 根據返回的數據顯示結果
+                if (data.error) {
+                    resultsDiv.innerHTML = `<p class="error">錯誤: ${data.error}</p>`;
+                } else {
+                    let recommendationClass = '';
+                    if (data.recommendation === '建議買入') {
+                        recommendationClass = 'recommend-buy';
+                    } else if (data.recommendation === '建議賣出') {
+                        recommendationClass = 'recommend-sell';
+                    } else {
+                        recommendationClass = 'recommend-hold';
+                    }
+
+                    resultsDiv.innerHTML = `
+                        <h2>${data.ticker}</h2>
+                        <p>最新收市價: ${data.latest_price}</p>
+                        <p>20日SMA: ${data.sma_20}</p>
+                        <p>50日SMA: ${data.sma_50}</p>
+                        <p>14日RSI: ${data.rsi_14}</p>
+                        <p><strong>建議: <span class="${recommendationClass}">${data.recommendation}</span></strong></p>
+                        <p><em>(${data.details})</em></p>
+                    `;
+                }
+
+            } catch (error) {
+                console.error('獲取分析失敗:', error);
+                resultsDiv.innerHTML = `<p class="error">請求 API 時發生錯誤: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
